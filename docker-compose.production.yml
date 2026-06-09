@@ -1,0 +1,55 @@
+services:
+  app:
+    image: ${APP_IMAGE:-registry.gitlab.com/cxtech/frater_fotos/api:prod}
+    container_name: frater-app
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      HOST: "0.0.0.0"
+      PORT: "3003"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_proxy"
+      - "traefik.http.routers.frater-api.rule=Host(`api-frater.cx-tech.net`)"
+      - "traefik.http.routers.frater-api.entrypoints=websecure"
+      - "traefik.http.routers.frater-api.tls.certresolver=myresolver"
+      - "traefik.http.services.frater-api.loadbalancer.server.port=3003"
+      - "traefik.http.middlewares.frater-api-headers.headers.accesscontrolalloworiginlist=https://frater-fotos.cx-tech.net"
+      - "traefik.http.middlewares.frater-api-headers.headers.accesscontrolallowmethods=GET,POST,PATCH,PUT,DELETE,OPTIONS"
+      - "traefik.http.middlewares.frater-api-headers.headers.accesscontrolallowheaders=Authorization,Content-Type"
+      - "traefik.http.middlewares.frater-api-headers.headers.accesscontrolallowcredentials=true"
+      - "traefik.http.middlewares.frater-api-headers.headers.accesscontrolmaxage=86400"
+      - "traefik.http.routers.frater-api.middlewares=frater-api-headers"
+    networks:
+      - traefik_proxy
+      - internal
+    restart: unless-stopped
+
+  front:
+    image: ${FRONT_IMAGE:-registry.gitlab.com/cxtech/frater_fotos/front:prod}
+    container_name: frater-front
+    depends_on:
+      - app
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_proxy"
+      - "traefik.http.routers.frater-front.rule=Host(`frater-fotos.cx-tech.net`)"
+      - "traefik.http.routers.frater-front.entrypoints=websecure"
+      - "traefik.http.routers.frater-front.tls.certresolver=myresolver"
+      - "traefik.http.services.frater-front.loadbalancer.server.port=80"
+      - "traefik.http.routers.frater-front_http.rule=Host(`frater-fotos.cx-tech.net`)"
+      - "traefik.http.routers.frater-front_http.entrypoints=web"
+      - "traefik.http.routers.frater-front_http.middlewares=frater-redirect"
+      - "traefik.http.middlewares.frater-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.frater-front_http.service=frater-front"
+    networks:
+      - traefik_proxy
+      - internal
+    restart: unless-stopped
+
+networks:
+  traefik_proxy:
+    external: true
+  internal:
+    driver: bridge

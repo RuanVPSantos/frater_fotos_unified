@@ -1,0 +1,27 @@
+services:
+  react-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: '/api'
+    container_name: apres_frater-react-app-1
+    restart: always
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.frater-fotos.rule=Host(`frater-fotos.cx-tech.net`)'
+      - 'traefik.http.routers.frater-fotos.entrypoints=websecure'
+      - 'traefik.http.routers.frater-fotos.tls.certresolver=myresolver'
+      - 'traefik.http.routers.frater-fotos.service=frater-fotos'
+      - 'traefik.http.routers.frater-fotos_http.rule=Host(`frater-fotos.cx-tech.net`)'
+      - 'traefik.http.routers.frater-fotos_http.entrypoints=web'
+      - 'traefik.http.routers.frater-fotos_http.middlewares=frater-redirect'
+      - 'traefik.http.routers.frater-fotos_http.service=frater-fotos'
+      - 'traefik.http.middlewares.frater-redirect.redirectscheme.scheme=https'
+      - 'traefik.http.services.frater-fotos.loadbalancer.server.port=80'
+    networks:
+      - traefik_proxy
+
+networks:
+  traefik_proxy:
+    external: true
